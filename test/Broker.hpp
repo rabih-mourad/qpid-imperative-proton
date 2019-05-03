@@ -53,47 +53,60 @@ public:
       m_listenerHandler.getStartedFuture().get();
    }
 
+   ~Broker()
+   {
+      if (!m_isClosed) {
+         m_listener.stop();
+      }
+   }
+
    void injectMessages(std::vector<proton::message> messages)
    {
       m_messages.insert(m_messages.end(), messages.begin(), messages.end());
    }
 
+   int m_acceptedMsgs = 0;
+   int m_rejectedMsgs = 0;
+   int m_releasedMsgs = 0;
+
 private:
-   void on_container_start(proton::container &c)
+   void on_container_start(proton::container &c) override
    {
       std::cout << "broker on_container_start" << std::endl;
       c.receiver_options(proton::receiver_options());
       m_listener = c.listen(m_url, m_listenerHandler);
    }
 
-   void on_connection_open(proton::connection &c)
+   void on_connection_open(proton::connection &c) override
    {
       std::cout << "broker on_connection_open" << std::endl;
       m_connection = c;
       c.open();
    }
 
-   void on_connection_close(proton::connection&)
+   void on_connection_close(proton::connection&) override
    {
       std::cout << "broker on_connection_close" << std::endl;
       m_listener.stop();
    }
 
-   void on_transport_error(proton::transport &t)
+   void on_transport_error(proton::transport &t) override
    {
       std::cout << "broker on_transport_error" << std::endl;
       std::cerr << "Broker::on_transport_error: " << t.error().what() << std::endl;
       m_listener.stop();
    }
 
-   void on_error(const proton::error_condition &c)
+   void on_error(const proton::error_condition &c) override
    {
       std::cout << "broker on_error" << std::endl;
       std::cerr << "Broker::on_error: " << c.what() << std::endl;
+
+      m_isClosed = true;
       m_listener.stop();
    }
 
-   void on_message(proton::delivery& delivery, proton::message& message)
+   void on_message(proton::delivery& delivery, proton::message& message) override
    {
       std::cout << "broker on_message" << std::endl;
       m_currentDelivery = { message, delivery };
@@ -111,14 +124,30 @@ private:
       }
    }
 
-   void on_sendable(proton::sender& sender)
+   void on_sendable(proton::sender& sender) override
    {
       std::cout << "broker on_sendable" << std::endl;
       sendMessages(sender);
    }
 
+   void on_tracker_accept(proton::tracker& ) override
+   {
+      ++m_acceptedMsgs;
+   }
+
+   void on_tracker_reject(proton::tracker&) override
+   {
+      ++m_rejectedMsgs;
+   }
+
+   void on_tracker_release(proton::tracker&) override
+   {
+      ++m_releasedMsgs;
+   }
+
 private:
    std::string m_url;
+   bool m_isClosed = false;
    proton::ThreadRAII m_brokerThread;
    std::deque<proton::message> m_messages;
    std::pair<proton::message, proton::delivery> m_currentDelivery;

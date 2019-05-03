@@ -13,6 +13,7 @@ set (headers
     include/proton/imperative/Session.hpp
     include/proton/imperative/Sender.hpp
     include/proton/imperative/Receiver.hpp
+    include/proton/imperative/Delivery.hpp
     include/proton/imperative/ThreadRAII.hpp
     include/proton/imperative/PromiseWithActiveFlag.hpp
     include/proton/imperative/PnObjectLifeManager.hpp)
@@ -23,6 +24,7 @@ set (sources
     src/Session.cpp
     src/Sender.cpp
     src/Receiver.cpp
+    src/Delivery.cpp
     src/ThreadRAII.cpp
     src/PromiseWithActiveFlag.cpp
     src/PnObjectLifeManager.cpp)

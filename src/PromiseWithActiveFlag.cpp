@@ -6,6 +6,10 @@ PromiseWithActiveFlag::PromiseWithActiveFlag()
    :m_active(false)
 {}
 
+PromiseWithActiveFlag::PromiseWithActiveFlag(bool active)
+   : m_active(active)
+{}
+
 PromiseWithActiveFlag::PromiseWithActiveFlag(PromiseWithActiveFlag&& p)
    :m_promise(std::move(p.m_promise)),
    m_active(p.m_active)

@@ -8,7 +8,12 @@ include(CompilerFlags)
 
 set (sources
     Broker.hpp
-    main.cpp)
+	ContainerTest.cpp
+	ConnectionTest.cpp
+	SessionTest.cpp
+	SenderTest.cpp
+	ReceiverTest.cpp
+	DeliveryTest.cpp)
 add_executable(${TARGET} ${sources})
 
 find_package(QpidProton REQUIRED)

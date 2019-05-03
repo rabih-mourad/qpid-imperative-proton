@@ -14,22 +14,22 @@ public:
    PnObjectLifeManager();
    PnObjectLifeManager(PnObjectLifeManager&& c);
 
+   // methods called on proton handlers side
    void handlePnError(std::string err);
+   void handlePnClose(std::function<void()> releasePnObjects);
+   void handlePnOpen();
+
+   // methods called on user's thread side
    void checkForExceptions();
-   std::future<void> open();
-   void finishedOpenning();
-   //For simplicity, we will allow only one open. It can be changed afterwards.
-   bool canBeOpened();
+   std::future<void> getOpenFuture();
    std::future<void> close();
-   void finishedClosing();
    //For simplicity, we will allow only one close. It can be changed afterwards.
-   bool canBeClosed();
+   bool hasBeenClosedOrInError();
 
 private:
    PromiseWithActiveFlag m_onOpenPromise;
    PromiseWithActiveFlag m_onClosePromise;
-   bool m_hasBeenOpened;
-   bool m_hasBeenClosed;
+   bool m_hasBeenClosed = false;
    std::exception_ptr m_exception;
 };
 

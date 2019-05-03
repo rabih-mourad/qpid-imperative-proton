@@ -11,6 +11,7 @@ class PROTON_IMPERATIVE_API PromiseWithActiveFlag
 {
 public:
    PromiseWithActiveFlag();
+   PromiseWithActiveFlag(bool active);
    PromiseWithActiveFlag(PromiseWithActiveFlag&& p);
 
    std::future<void> get_future();

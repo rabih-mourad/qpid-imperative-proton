@@ -19,12 +19,16 @@ class Connection;
 class PROTON_IMPERATIVE_API Container
 {
 public:
-   //Synchronous methods
    Container();
    ~Container();
-   void close();
+   Container(const Container& other) = delete;
+   Container& operator=(const Container& other) = delete;
+   Container& operator=(Container&& other) = delete;
+   Container(Container&& c) = delete;
 
-   Connection createConnection();
+   void close();
+   //This method is synchronous because there is no thread safe way in proton to get the connection
+   Connection openConnection(const std::string& url, connection_options conn_opts);
 
 private:
    struct ContainerHandler : public messaging_handler
@@ -35,12 +39,10 @@ private:
       PnObjectLifeManager m_manager;
    };
 
-private:
    ContainerHandler m_containerHandler;
    container m_container;
    ThreadRAII m_thread;
 };
-
 }
 
 #endif

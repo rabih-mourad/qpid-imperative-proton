@@ -16,43 +16,29 @@
 #include <proton/imperative/PnObjectLifeManager.hpp>
 
 #include <queue>
+#include <list>
 
 namespace proton {
+
+class Delivery;
 
 class PROTON_IMPERATIVE_API Receiver
 {
 public:
-   struct Delivery
-   {
-      Delivery() = default;
-      Delivery(delivery d, message m)
-         :m_delivery(d), pn_message(m)
-      {}
-      
-      void accept()
-      {
-         m_delivery.work_queue().add([=]() {m_delivery.accept(); });
-      }
+   std::future<void> getOpenFuture();
+   void close();
+   std::future<Delivery> receive();
 
-      void reject()
-      {
-         m_delivery.work_queue().add([=]() {m_delivery.reject(); });
-      }
-
-      void release()
-      {
-         m_delivery.work_queue().add([=]() {m_delivery.release(); });
-      }
-
-      message pn_message;
-   private:
-      delivery m_delivery;
-   };
+   Receiver(Receiver&& c);
+   ~Receiver();
+   Receiver(const Receiver& other) = delete;
+   Receiver& operator=(const Receiver& other) = delete;
+   Receiver& operator=(Receiver&& other) = delete;
 
 private:
    struct ReceiverHandler : public messaging_handler
    {
-      ReceiverHandler() = default;
+      ReceiverHandler(work_queue* work);
       ReceiverHandler(ReceiverHandler&& c);
 
       std::future<Delivery> receive();
@@ -61,25 +47,25 @@ private:
       void on_receiver_close(receiver&) override;
       void on_receiver_error(receiver& sen) override;
       void on_message(delivery&, message&) override;
+      //To do:
       //void on_receiver_drain_finish(receiver&) override;
 
+      void releasePnMemberObjects();
+
       PnObjectLifeManager m_manager;
+      std::mutex m_queueLock;
+      std::queue<std::promise<Delivery>> m_promisesQueue;
+      std::mutex m_listLock;
+      std::list<delivery> m_unclosedDeliveries;
       receiver m_receiver;
-      std::queue<std::promise<Receiver::Delivery>> m_promisesQueue;
+      //to be able to chain commands without waiting for session to be initialized;
+      work_queue* m_work;
    };
 
-public:
-   std::future<void> open(const std::string& address, receiver_options send_opts);
-   void close();
-   std::future<Delivery> receive();
+   Receiver(work_queue* work, session& sess, const std::string& address, receiver_options rec_opts);
+   friend class Session;
 
-   Receiver(session sess);
-   Receiver(Receiver&& c);
-   ~Receiver();
-
-private:
-   ReceiverHandler m_receiverHandler;
-   session m_session;
+   std::unique_ptr<ReceiverHandler> m_receiverHandler;
 };
 
 }

@@ -18,13 +18,23 @@
 
 namespace proton {
 
-class SenderHandler;
-
 class PROTON_IMPERATIVE_API Sender
 {
+public:
+   std::future<void> getOpenFuture();
+   void close();
+   std::future<void> send(const message& mess);
+
+   Sender(Sender&& c);
+   ~Sender();
+   Sender(const Sender& other) = delete;
+   Sender& operator=(const Sender& other) = delete;
+   Sender& operator=(Sender&& other) = delete;
+
+private:
    struct SenderHandler : public messaging_handler
    {
-      SenderHandler() = default;
+      SenderHandler(work_queue* work);
       SenderHandler(SenderHandler&& c);
 
       std::future<void> send(const message& mess);
@@ -36,25 +46,21 @@ class PROTON_IMPERATIVE_API Sender
       void on_tracker_reject(tracker &) override;
       void on_tracker_release(tracker &) override;
 
-      std::promise<void> removeTrackerFromMapIfFoundElseThow(tracker &track);
+      std::shared_ptr<std::promise<void>> removeTrackerFromMapIfFoundElseThow(tracker &track);
+      void releasePnMemberObjects();
 
       PnObjectLifeManager m_manager;
       sender m_sender;
-      std::map<tracker, std::promise<void>> m_sentRequests;
+      //to be able to chain commands without waiting for session to be initialized;
+      work_queue* m_work;
+      std::map<tracker, std::shared_ptr<std::promise<void>>> m_sentRequests;
+      std::mutex m_mapMutex;
    };
 
-public:
-   std::future<void> open(const std::string& address, sender_options send_opts);
-   void close();
-   std::future<void> send(const message& mess);
+   Sender(work_queue* work, session& s, const std::string& address, sender_options send_opts);
+   friend class Session;
 
-   Sender(session s);
-   Sender(Sender&& c);
-   ~Sender();
-
-private:
-   SenderHandler m_senderHandler;
-   session m_session;
+   std::unique_ptr<SenderHandler> m_senderHandler;
 };
 
 }

@@ -24,8 +24,8 @@
 
 #define PN_VERSION_MAJOR 0
 #define PN_VERSION_MINOR 27
-#define PN_VERSION_POINT 0
+#define PN_VERSION_POINT 1
 
-#define PN_INSTALL_PREFIX "D:/jenkins/home/workspace/proton-acceptance/proton-workspace/build_dir/RelWithDebInfo/install"
+#define PN_INSTALL_PREFIX "D:/workspace/Stash/fix_pdb/proton/build_dir/RelWithDebInfo/install"
 
 #endif /* version.h */

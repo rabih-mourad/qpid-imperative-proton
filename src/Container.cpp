@@ -8,6 +8,7 @@ using namespace proton;
 Container::Container()
    :m_container(m_containerHandler)
 {
+   auto f = m_containerHandler.m_manager.getOpenFuture();
    m_thread = ThreadRAII(std::thread([&]() {
       try {
          m_container.auto_stop(false);
@@ -15,7 +16,7 @@ Container::Container()
       } catch (const std::exception& e) {
          std::cout << "std::exception caught, message:" << e.what() << std::endl;
       }}));
-   m_containerHandler.m_manager.open().get();
+   f.get();
 }
 
 Container::~Container()
@@ -25,16 +26,19 @@ Container::~Container()
 
 void Container::close()
 {
-   if (m_containerHandler.m_manager.canBeClosed())
+   if (!m_containerHandler.m_manager.hasBeenClosedOrInError())
    {
+      // we get the future before launching the action because std promise is not thread safe between get and set
+      auto f = m_containerHandler.m_manager.close();
       m_container.stop();
-      m_containerHandler.m_manager.close().get();
+      f.get();
    }
 }
 
-Connection Container::createConnection()
+Connection Container::openConnection(const std::string& url, connection_options conn_opts)
 {
-   return Connection(m_container);
+   m_containerHandler.m_manager.checkForExceptions();
+   return Connection(m_container, url, conn_opts);
 }
 
 //ContainerHandler
@@ -42,11 +46,11 @@ Connection Container::createConnection()
 void Container::ContainerHandler::on_container_start(proton::container&)
 {
    std::cout << "client on_container_start" << std::endl;
-   m_manager.finishedOpenning();
+   m_manager.handlePnOpen();
 }
 
 void Container::ContainerHandler::on_container_stop(container&)
 {
    std::cout << "client on_container_stop" << std::endl;
-   m_manager.finishedClosing();
+   m_manager.handlePnClose([]{});
 }

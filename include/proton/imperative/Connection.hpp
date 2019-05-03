@@ -16,8 +16,19 @@ namespace proton {
 
 class PROTON_IMPERATIVE_API Connection
 {
+public:
+   //std::future<void> getOpenFuture();
+   void close();
+   Session openSession(session_options sess_opts);
+
+   Connection(Connection&& c);
+   ~Connection();
+   Connection(const Connection& other) = delete;
+   Connection& operator=(const Connection& other) = delete;
+   Connection& operator=(Connection&& other) = delete;
+
 private:
-   struct ConnectionHandler : public messaging_handler
+   struct PROTON_IMPERATIVE_API ConnectionHandler : public messaging_handler
    {
       ConnectionHandler() = default;
       ConnectionHandler(ConnectionHandler&& c);
@@ -27,24 +38,17 @@ private:
       void on_transport_open(transport&) override;
       void on_transport_close(transport&) override;
       void on_transport_error(transport&) override;
+      void releasePnMemberObjects();
 
-      PnObjectLifeManager m_manager;
       connection m_connection;
+      work_queue* m_work;
+      PnObjectLifeManager m_manager;
    };
 
-public:
-   std::future<void> open(const std::string& url, connection_options conn_opts);
-   void close();
-   Session createSession();
+   Connection(container& c, const std::string& url, connection_options conn_opts);
+   friend class Container;
 
-   Connection(container& cont);
-   Connection(Connection&& c);
-   ~Connection();
-
-private:
-   ConnectionHandler m_connectionHandler;
-   //by reference because if we copy the container it crashes
-   container& m_container;
+   std::unique_ptr<ConnectionHandler> m_connectionHandler;
 };
 
 }
