@@ -22,7 +22,7 @@ The strategy was to make everything async even for the creation of the connectio
 
 
 Technical stuff:
-- compiled with visual studio 2013 on windows 7
+- compiled with visual studio 2017
 - C++11 standard is used
-- unit tests use gtest 1.7
+- unit tests use gtest commit 8fbf9d16a63
 - qpid-proton 0.27.1
