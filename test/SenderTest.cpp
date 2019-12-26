@@ -12,6 +12,7 @@
 #include <proton/imperative/Sender.hpp>
 
 #include <Broker.hpp>
+#include <Constants.hpp>
 
 #include <iostream>
 
@@ -26,14 +27,27 @@ tests to add:
 - if in error release all promises
 */
 
+TEST(SenderTest, senderClosesCorrectlyOnDestruction)
+{
+   Broker brk(url, destination);
+   {
+      proton::Container cont;
+      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Session sess = conn.openSession(proton::session_options());
+      proton::Sender sen = sess.openSender(destination, proton::sender_options());
+      sen.getOpenFuture().get();
+   }
+   std::cout << "Destroyed correctly " << std::endl;
+}
+
 TEST(SenderTest, canSendInAsynch)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
-   proton::Sender sen = sess.openSender("examples", proton::sender_options());
+   proton::Sender sen = sess.openSender(destination, proton::sender_options());
 
    proton::message msg("test");
 
@@ -52,109 +66,92 @@ TEST(SenderTest, canSendInAsynch)
 
 TEST(SenderTest, oneShotSender)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
 
    proton::Container()
-      .openConnection("//127.0.0.1:5672", proton::connection_options())
+      .openConnection(url, proton::connection_options())
       .openSession(proton::session_options())
-      .openSender("examples", proton::sender_options())
+      .openSender(destination, proton::sender_options())
       .send(proton::message("test"))
       .get();
 }
 
 TEST(SenderTest, senderUnusableAfterCloseIsCalled)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
-   proton::Sender sen = sess.openSender("examples", proton::sender_options());
+   proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
    sen.close();
    try {
       proton::message msg("test");
       sen.send(msg).get();
-      FAIL() << "Test should fail if send does not throw";
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
-      std::cout << "Expected exception: " << e.what() << std::endl;
+      ASSERT_STREQ(ObjectClosedExceptionMsg.c_str(), e.what());
    }
 }
 
-TEST(SenderTest, DISABLED_senderClosesIfConnectionCloses)
+TEST(SenderTest, senderClosesIfConnectionCloses)
 {
-   const std::string destination("examples");
-   Broker brk("//127.0.0.1:5672", destination);
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
-   proton::Sender sen = sess.openSender("examples", proton::sender_options());
+   proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
    conn.close();
    try {
       proton::message msg("test");
       sen.send(msg).get();
-      FAIL() << "Test should fail if it does not throw";
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
-      std::cout << "Expected exception: " << e.what() << std::endl;
+      ASSERT_STREQ(ParentObjectWasClosedExceptionMsg.c_str(), e.what());
    }
 }
 
-TEST(SenderTest, DISABLED_senderClosesIfContainerCloses)
+TEST(SenderTest, senderClosesIfContainerCloses)
 {
-   const std::string destination("examples");
-   Broker brk("//127.0.0.1:5672", destination);
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
-   proton::Sender sen = sess.openSender("examples", proton::sender_options());
+   proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
    cont.close();
    try {
       proton::message msg("test");
       sen.send(msg).get();
-      FAIL() << "Test should fail if it does not throw";
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
-      std::cout << "Expected exception: " << e.what() << std::endl;
+      ASSERT_STREQ(ParentObjectWasClosedExceptionMsg.c_str(), e.what());
    }
 }
 
-TEST(SenderTest, DISABLED_errorHandlingAtSend)
+TEST(SenderTest, senderInErrorIfConnectionInError)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
-   //should simulate an error when send in broker
+   Broker brk(url, destination);
+
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", 
-      proton::connection_options().idle_timeout(proton::duration(2000))
-      .reconnect(proton::reconnect_options().max_attempts(50).delay(proton::duration(50)).delay_multiplier(1).max_delay(proton::duration(1000))));
-
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
-
-   proton::Sender sen = sess.openSender("examples", proton::sender_options());
+   proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
 
-   //Simulate Connection Error
+   const std::string errMsg("Simulating network error");
+   brk.close(errMsg);
+   std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
-   try {
-      proton::message msg("test");
-      sen.send(msg).get();
-      FAIL() << "Test should fail if send does not throw";
-   }
-   catch (std::exception& e) {
-      std::cerr << "Expected exception: " << e.what() << std::endl;
-   }
+   proton::message msg("test");
+   EXPECT_THROW(sen.send(msg).get(), std::exception);
 
-   try {
-      proton::Session sess1 = conn.openSession(proton::session_options());
-      sess1.getOpenFuture().get();
-      FAIL() << "Test should fail if send does not throw";
-   }
-   catch (std::exception& e) {
-      std::cerr << "Expected exception: " << e.what() << std::endl;
-   }
+   EXPECT_THROW(conn.openSession(proton::session_options()).getOpenFuture().get(), std::exception);
 }

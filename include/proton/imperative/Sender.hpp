@@ -25,8 +25,8 @@ public:
    void close();
    std::future<void> send(const message& mess);
 
-   Sender(Sender&& c);
    ~Sender();
+   Sender(Sender&& c) = default;
    Sender(const Sender& other) = delete;
    Sender& operator=(const Sender& other) = delete;
    Sender& operator=(Sender&& other) = delete;
@@ -34,8 +34,11 @@ public:
 private:
    struct SenderHandler : public messaging_handler
    {
-      SenderHandler(work_queue* work);
-      SenderHandler(SenderHandler&& c);
+      SenderHandler(work_queue* work, CloseRegistry* sessionCloseRegistry);
+      SenderHandler(SenderHandler&& c) = default;
+      SenderHandler(const SenderHandler& other) = delete;
+      SenderHandler& operator=(const SenderHandler& other) = delete;
+      SenderHandler& operator=(SenderHandler&& other) = delete;
 
       std::future<void> send(const message& mess);
 
@@ -47,7 +50,7 @@ private:
       void on_tracker_release(tracker &) override;
 
       std::shared_ptr<std::promise<void>> removeTrackerFromMapIfFoundElseThow(tracker &track);
-      void releasePnMemberObjects();
+      void releasePnMemberObjects(const std::string&);
 
       PnObjectLifeManager m_manager;
       sender m_sender;
@@ -57,7 +60,7 @@ private:
       std::mutex m_mapMutex;
    };
 
-   Sender(work_queue* work, session& s, const std::string& address, sender_options send_opts);
+   Sender(work_queue* work, session& s, const std::string& address, sender_options send_opts, CloseRegistry* sessionCloseRegistry);
    friend class Session;
 
    std::unique_ptr<SenderHandler> m_senderHandler;

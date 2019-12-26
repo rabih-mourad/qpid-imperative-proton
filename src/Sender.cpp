@@ -4,18 +4,14 @@
 
 using namespace proton;
 
-Sender::Sender(work_queue* work, session& sess, const std::string& address, sender_options send_opts)
-   :m_senderHandler(new SenderHandler(work))
+Sender::Sender(work_queue* work, session& sess, const std::string& address, sender_options send_opts, CloseRegistry* sessionCloseRegistry)
+   :m_senderHandler(new SenderHandler(work, sessionCloseRegistry))
 {
    send_opts.handler(*m_senderHandler);
    // TO DO see if we can use [=] instead of [&]
    sender& sen = m_senderHandler->m_sender;
    work->add([=, &sess, &sen]() { sen = sess.open_sender(address, send_opts); });
 }
-
-Sender::Sender(Sender&& s)
-   : m_senderHandler(std::move(s.m_senderHandler))
-{}
 
 Sender::~Sender()
 {
@@ -24,17 +20,29 @@ Sender::~Sender()
 
 void Sender::close()
 {
-   if (m_senderHandler && !m_senderHandler->m_manager.hasBeenClosedOrInError())
+   if (m_senderHandler == nullptr)
    {
+      return;
+   }
+
+   std::unique_lock<std::mutex> lock(m_senderHandler->m_manager.m_mutex);
+   if (!m_senderHandler->m_manager.hasBeenClosed())
+   {
+      std::function<void()> closeFn = [=]() { m_senderHandler->m_sender.close(); };
       //we get the future before launching the action because std promise is not thread safe between get and set
       auto f = m_senderHandler->m_manager.close();
-      m_senderHandler->m_work->add([=]() {m_senderHandler->m_sender.close(); });
-      f.get();
+      if (!m_senderHandler->m_manager.isInError())
+      {
+         m_senderHandler->m_work->add(closeFn);
+      }
+      lock.unlock();
+      f.wait();
    }
 }
 
 std::future<void> Sender::send(const message& mess)
 {
+   std::lock_guard<std::mutex> lock(m_senderHandler->m_manager.m_mutex);
    m_senderHandler->m_manager.checkForExceptions();
    return m_senderHandler->send(mess);
 }
@@ -46,15 +54,8 @@ std::future<void> Sender::getOpenFuture()
 
 // SenderHandler
 
-Sender::SenderHandler::SenderHandler(work_queue* work)
-   :m_work(work)
-{}
-
-Sender::SenderHandler::SenderHandler(SenderHandler&& s)
-   : m_manager(std::move(s.m_manager)),
-   m_sender(std::move(s.m_sender)),
-   m_work(s.m_work),
-   m_sentRequests(std::move(s.m_sentRequests))
+Sender::SenderHandler::SenderHandler(work_queue* work, CloseRegistry* sessionCloseRegistry)
+   :m_work(work), m_manager(sessionCloseRegistry, [&](const std::string& str) {releasePnMemberObjects(str); })
 {}
 
 std::future<void> Sender::SenderHandler::send(const message& mess)
@@ -79,20 +80,16 @@ void Sender::SenderHandler::on_sender_open(sender& sen)
 
 void Sender::SenderHandler::on_sender_close(sender&)
 {
+   std::lock_guard<std::mutex> lock(m_manager.m_mutex);
    std::cout << "client on_sender_close" << std::endl;
-   m_manager.handlePnClose(std::bind(&Sender::SenderHandler::releasePnMemberObjects, this));
+   m_manager.handlePnClose();
 }
 
 void Sender::SenderHandler::on_sender_error(sender& sen)
 {
+   std::lock_guard<std::mutex> lock(m_manager.m_mutex);
    std::cout << "client on_sender_error" << std::endl;
    m_manager.handlePnError(sen.error().what());
-   std::lock_guard<std::mutex> lock(m_mapMutex);
-   for (auto it = m_sentRequests.cbegin(); it != m_sentRequests.cend(); it++)
-   {
-      std::shared_ptr<std::promise<void>> promise = it->second;
-      promise->set_exception(std::make_exception_ptr(std::runtime_error(sen.error().what())));
-   }
 }
 
 void Sender::SenderHandler::on_tracker_accept(tracker& track)
@@ -133,9 +130,16 @@ std::shared_ptr<std::promise<void>> Sender::SenderHandler::removeTrackerFromMapI
    return promise;
 }
 
-void Sender::SenderHandler::releasePnMemberObjects()
+void Sender::SenderHandler::releasePnMemberObjects(const std::string& str)
 {
    // Reseting pn objects for thread safety
    m_sentRequests.clear();
    m_sender = sender();
+
+   std::lock_guard<std::mutex> lock(m_mapMutex);
+   for (auto it = m_sentRequests.cbegin(); it != m_sentRequests.cend(); it++)
+   {
+      std::shared_ptr<std::promise<void>> promise = it->second;
+      promise->set_exception(std::make_exception_ptr(std::runtime_error(str)));
+   }
 }

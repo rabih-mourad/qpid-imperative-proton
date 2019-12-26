@@ -14,6 +14,7 @@
 #include <proton/imperative/config.hpp>
 #include <proton/imperative/PromiseWithActiveFlag.hpp>
 #include <proton/imperative/PnObjectLifeManager.hpp>
+#include <proton/imperative/Delivery.hpp>
 
 #include <queue>
 #include <list>
@@ -29,8 +30,8 @@ public:
    void close();
    std::future<Delivery> receive();
 
-   Receiver(Receiver&& c);
    ~Receiver();
+   Receiver(Receiver&& c) = default;
    Receiver(const Receiver& other) = delete;
    Receiver& operator=(const Receiver& other) = delete;
    Receiver& operator=(Receiver&& other) = delete;
@@ -38,8 +39,11 @@ public:
 private:
    struct ReceiverHandler : public messaging_handler
    {
-      ReceiverHandler(work_queue* work);
-      ReceiverHandler(ReceiverHandler&& c);
+      ReceiverHandler(work_queue* work, CloseRegistry* sessionCloseRegistry);
+      ReceiverHandler(ReceiverHandler&& c) = default;
+      ReceiverHandler(const ReceiverHandler& other) = delete;
+      ReceiverHandler& operator=(const ReceiverHandler& other) = delete;
+      ReceiverHandler& operator=(ReceiverHandler&& other) = delete;
 
       std::future<Delivery> receive();
 
@@ -50,7 +54,7 @@ private:
       //To do:
       //void on_receiver_drain_finish(receiver&) override;
 
-      void releasePnMemberObjects();
+      void releasePnMemberObjects(const std::string&);
 
       PnObjectLifeManager m_manager;
       std::mutex m_queueLock;
@@ -62,7 +66,7 @@ private:
       work_queue* m_work;
    };
 
-   Receiver(work_queue* work, session& sess, const std::string& address, receiver_options rec_opts);
+   Receiver(work_queue* work, session& sess, const std::string& address, receiver_options rec_opts, CloseRegistry* sessionCloseRegistry);
    friend class Session;
 
    std::unique_ptr<ReceiverHandler> m_receiverHandler;

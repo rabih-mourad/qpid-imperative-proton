@@ -33,6 +33,12 @@ public:
 private:
    struct ContainerHandler : public messaging_handler
    {
+      ContainerHandler();
+      ContainerHandler(const ContainerHandler& other) = delete;
+      ContainerHandler& operator=(const ContainerHandler& other) = delete;
+      ContainerHandler& operator=(ContainerHandler&& other) = delete;
+      ContainerHandler(ContainerHandler&& c) = delete;
+
       void on_container_start(proton::container&) override;
       void on_container_stop(container&) override;
 
@@ -41,6 +47,7 @@ private:
 
    ContainerHandler m_containerHandler;
    container m_container;
+   error_condition m_pnErr;
    ThreadRAII m_thread;
 };
 }

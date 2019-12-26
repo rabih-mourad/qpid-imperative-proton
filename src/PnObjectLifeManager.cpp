@@ -1,30 +1,71 @@
 #include <proton/imperative/PnObjectLifeManager.hpp>
 
+//to remove
+#include <iostream>
+
 using namespace proton;
 
-PnObjectLifeManager::PnObjectLifeManager()
-   :m_onOpenPromise(true)
-{}
-
-PnObjectLifeManager::PnObjectLifeManager(PnObjectLifeManager&& c)
-   : m_onOpenPromise(std::move(c.m_onOpenPromise)),
-   m_onClosePromise(std::move(c.m_onClosePromise)),
-   m_hasBeenClosed(c.m_hasBeenClosed),
-   m_exception(std::move(c.m_exception))
-{}
+PnObjectLifeManager::PnObjectLifeManager(CloseRegistry* parentCloseRegistry, std::function<void(const std::string&)> releasePnObjects)
+   : m_parentCloseRegistry(parentCloseRegistry), m_releasePnObjects(releasePnObjects), errorParentClosed("Parent object was closed")
+{
+   m_onOpenPromise.activate();
+   if (m_parentCloseRegistry != nullptr) {
+      m_errorFn = [&](std::string str) { this->handlePnError(str); };
+      m_closeFn = [&] { this->handlePnClose(); };
+      m_parentCloseRegistry->registerCallbacks(&m_errorFn, &m_closeFn);
+   }
+}
 
 void PnObjectLifeManager::handlePnError(std::string errorMsg)
 {
+   std::cout << "---handlePnError start" << std::endl;
    m_exception = std::make_exception_ptr(std::runtime_error(errorMsg));
-}
+   m_exceptionMsg = errorMsg;
+   m_closeRegistry.notifyError(errorMsg);
+   m_onClosePromise.activate();
 
-void PnObjectLifeManager::handlePnClose(std::function<void()> releasePnObjects)
-{
-   releasePnObjects();
    if (m_onOpenPromise.isActive())
    {
       m_onOpenPromise.set_exception(m_exception);
-      return;
+   }
+   std::cout << "---handlePnError finish" << std::endl;
+}
+
+void PnObjectLifeManager::handlePnClose()
+{
+   std::cout << "---handlePnClose start" << std::endl;
+   if (!m_exception)
+   {
+      // If the eventloop called close on a handler without the user requesting, nor the destructor called nor on_x_error is called
+      if (m_hasBeenClosed == false)
+      {
+         m_exception = std::make_exception_ptr(std::runtime_error(errorParentClosed+" without explicit action"));
+      }
+
+      // If a graceful close was called on the object
+      std::cout << "---handlePnClose no except" << std::endl;
+      m_closeRegistry.notifyError(errorParentClosed);
+      m_closeRegistry.notifyClose();
+      m_releasePnObjects("Object was closed");
+   }
+   // If a close was called on the object after an on_x_error
+   else
+   {
+      std::cout << "---handlePnClose in except" << std::endl;
+      m_closeRegistry.notifyClose();
+      m_releasePnObjects(m_exceptionMsg);
+      std::cout << "---handlePnClose after release" << std::endl;
+   }
+
+   if (m_parentCloseRegistry != nullptr)
+   {
+      // TO DO check how to unregister callbacks without being in the loop
+      m_parentCloseRegistry->unregisterCallbacks(&m_errorFn, &m_closeFn);
+   }
+
+   if (m_onOpenPromise.isActive())
+   {
+      m_onOpenPromise.set_exception(m_exception);
    }
    if (m_onClosePromise.isActive())
    {
@@ -60,10 +101,21 @@ void PnObjectLifeManager::handlePnOpen()
 std::future<void> PnObjectLifeManager::close()
 {
    m_hasBeenClosed = true;
+   m_onClosePromise.activate();
    return m_onClosePromise.get_future();
 }
 
-bool PnObjectLifeManager::hasBeenClosedOrInError()
+bool PnObjectLifeManager::hasBeenClosed()
 {
-   return m_hasBeenClosed || m_exception;
+   return m_hasBeenClosed;
+}
+
+bool PnObjectLifeManager::isInError()
+{
+   return !!m_exception;
+}
+
+CloseRegistry* PnObjectLifeManager::getCloseRegistry()
+{
+   return &m_closeRegistry;
 }

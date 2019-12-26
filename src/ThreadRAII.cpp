@@ -5,18 +5,7 @@ using namespace proton;
 ThreadRAII::ThreadRAII(std::thread&& thread)
    : m_thread(std::move(thread))
 {
-}
-
-ThreadRAII::ThreadRAII(ThreadRAII&& thread)
-   : m_thread(std::move(thread.m_thread))
-{
-}
-
-ThreadRAII& ThreadRAII::operator=(ThreadRAII&& thread)
-{
-   m_thread = std::move(thread.m_thread);
-   return *this;
-}
+}  
 
 std::thread& ThreadRAII::get()
 {

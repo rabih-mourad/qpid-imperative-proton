@@ -16,7 +16,8 @@ set (headers
     include/proton/imperative/Delivery.hpp
     include/proton/imperative/ThreadRAII.hpp
     include/proton/imperative/PromiseWithActiveFlag.hpp
-    include/proton/imperative/PnObjectLifeManager.hpp)
+    include/proton/imperative/PnObjectLifeManager.hpp
+    include/proton/imperative/CloseRegistry.hpp)
 
 set (sources
     src/Container.cpp
@@ -27,7 +28,8 @@ set (sources
     src/Delivery.cpp
     src/ThreadRAII.cpp
     src/PromiseWithActiveFlag.cpp
-    src/PnObjectLifeManager.cpp)
+    src/PnObjectLifeManager.cpp
+    src/CloseRegistry.cpp)
 add_library(${TARGET} SHARED ${headers} ${sources})
 
 find_package(QpidProton REQUIRED)

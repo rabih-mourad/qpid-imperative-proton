@@ -7,69 +7,96 @@
 #include <proton/imperative/Connection.hpp>
 
 #include <Broker.hpp>
+#include <Constants.hpp>
 
 #include <iostream>
 
 #include <gtest/gtest.h>
 
-/*
-tests to add:
-- can create multiple sessions
-- can't create sessions after close
-- error handling correctly propagated
-*/
 
 TEST(ConnectionTest, connectionClosesCorrectlyOnDestruction)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+      proton::Connection conn = cont.openConnection(url, proton::connection_options());
    }
    std::cout << "Destroyed correctly " << std::endl;
 }
 
-TEST(ConnectionTest, ConnectionUnusableIfConnnectionCloses)
+TEST(ConnectionTest, CanCreateMultipleSessionsFromConnection)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Session sess1 = conn.openSession(proton::session_options());
+   proton::Session sess2 = conn.openSession(proton::session_options());
+   sess1.getOpenFuture().get();
+   sess2.getOpenFuture().get();
+   sess1.close();
+   sess2.close();
+   conn.close();
+   cont.close();
+}
+
+TEST(ConnectionTest, ConnectionUnusableIfConnnectionCloses)
+{
+   Broker brk(url, destination);
+
+   proton::Container cont;
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    conn.close();
    try {
       std::cout << "opening session" << std::endl;
       conn.openSession(proton::session_options());
-      FAIL() << "Test should fail if it does not throw";
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
-      std::cout << "Expected exception: " << e.what() << std::endl;
+      ASSERT_STREQ(ObjectClosedExceptionMsg.c_str(), e.what());
    }
 }
 
 TEST(ConnectionTest, ConnectionClosesIfContainerCloses)
 {
-   Broker brk("//127.0.0.1:5672", "examples");
+   Broker brk(url, destination);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection("//127.0.0.1:5672", proton::connection_options());
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
    cont.close();
    try {
       std::cout << "opening session" << std::endl;
       conn.openSession(proton::session_options());
-      FAIL() << "Test should fail if it does not throw";
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
-      std::cout << "Expected exception: " << e.what() << std::endl;
+      ASSERT_STREQ(ParentObjectWasClosedExceptionMsg.c_str(), e.what());
    }
 }
 
 TEST(ConnectionTest, errorHandlingAtStart)
 {
    try {
-      proton::Container().openConnection("//127.0.0.1:5673", proton::connection_options());
-      FAIL() << "Test should fail if it does not throw";
+      proton::Container cont;
+      std::cout << "---container created" << std::endl;
+      proton::Connection conn = cont.openConnection("//127.0.0.1:5673", proton::connection_options());
+      std::cout << "---connection created" << std::endl;
+      FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {
       std::cerr << "Expected exception: " << e.what() << std::endl;
    }
+}
+
+TEST(ConnectionTest, connectionThrowsCorrectError)
+{
+   Broker brk(url, destination);
+
+   proton::Container cont;
+   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+
+   const std::string errMsg("Simulating network error");
+   brk.close(errMsg);
+   std::this_thread::sleep_for(std::chrono::milliseconds(2));
+   EXPECT_THROW(conn.openSession(proton::session_options()).getOpenFuture().get(), std::exception);
 }

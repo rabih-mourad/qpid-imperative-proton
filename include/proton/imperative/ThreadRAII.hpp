@@ -11,14 +11,14 @@ class PROTON_IMPERATIVE_API ThreadRAII
 {
 public:
    ThreadRAII() = default;
-
    ThreadRAII(std::thread&& thread);
 
    std::thread& get();
 
-   ThreadRAII(ThreadRAII&& thread);
-
-   ThreadRAII& operator=(ThreadRAII&& thread);
+   ThreadRAII(ThreadRAII&& thread) = default;
+   ThreadRAII& operator=(ThreadRAII&& thread) = default;
+   ThreadRAII(const ThreadRAII& other) = delete;
+   ThreadRAII& operator=(const ThreadRAII& other) = delete;
 
    ~ThreadRAII();
 

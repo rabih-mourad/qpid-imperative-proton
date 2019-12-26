@@ -2,22 +2,14 @@
 
 using namespace proton;
 
-PromiseWithActiveFlag::PromiseWithActiveFlag()
-   :m_active(false)
-{}
 
-PromiseWithActiveFlag::PromiseWithActiveFlag(bool active)
-   : m_active(active)
-{}
-
-PromiseWithActiveFlag::PromiseWithActiveFlag(PromiseWithActiveFlag&& p)
-   :m_promise(std::move(p.m_promise)),
-   m_active(p.m_active)
-{}
+void proton::PromiseWithActiveFlag::activate()
+{
+   m_active = true;
+}
 
 std::future<void> PromiseWithActiveFlag::get_future()
 {
-   m_active = true;
    return m_promise.get_future();
 }
 
