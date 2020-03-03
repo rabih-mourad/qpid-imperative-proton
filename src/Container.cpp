@@ -13,7 +13,8 @@ Container::Container()
    auto f = m_containerHandler.m_manager.getOpenFuture();
    m_thread = ThreadRAII(std::thread([&]() {
       try {
-         m_container.auto_stop(false);
+         // The autostop flag should be returned to false when container.stop is thread safe
+         m_container.auto_stop(true);
          m_container.run();
       } catch (const std::exception& e) {
          std::cout << "std::exception caught on pn container, message:" << e.what() << std::endl;
@@ -34,7 +35,12 @@ void Container::close()
    {
       // We get the future before launching the action because std promise is not thread safe between get and set
       auto f = m_containerHandler.m_manager.close();
-      m_container.stop(m_pnErr);
+
+      // This condition should be removed when container.stop is back to be thread safe
+      // If container still have active connections or didn't create any yet
+      if (m_containerHandler.m_manager.getCloseRegistry()->getNumberOfRegisteredCallbacks() > 0 || firstConnCreated == false) {
+         m_container.stop(m_pnErr);
+      }
       lock.unlock();
       std::cout << "---Container close is waiting" << std::endl;
       f.get();
@@ -46,6 +52,7 @@ Connection Container::openConnection(const std::string& url, connection_options 
 {
    m_containerHandler.m_manager.checkForExceptions();
    Connection conn(m_container, url, conn_opts, m_containerHandler.m_manager.getCloseRegistry());
+   firstConnCreated = true;
    conn.getOpenFuture().get();
    return conn;
 }

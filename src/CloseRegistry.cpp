@@ -31,3 +31,8 @@ void CloseRegistry::notifyClose()
       (**current)();
    }
 }
+
+int CloseRegistry::getNumberOfRegisteredCallbacks()
+{
+	return m_onCloseCallbacks.size();
+}

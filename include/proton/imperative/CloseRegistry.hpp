@@ -17,6 +17,9 @@ public:
    void notifyError(const std::string& str);
    void notifyClose();
 
+   // This function should be removed when container.stop is back to be thread safe
+   int getNumberOfRegisteredCallbacks();
+
    CloseRegistry() = default;
    CloseRegistry(CloseRegistry&& other) = default;
    CloseRegistry& operator=(CloseRegistry&& other) = default;

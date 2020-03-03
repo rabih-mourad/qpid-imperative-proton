@@ -49,6 +49,8 @@ private:
    container m_container;
    error_condition m_pnErr;
    ThreadRAII m_thread;
+   // The following flag should be removed when container.stop is back to be thread safe
+   bool firstConnCreated = false;
 };
 }
 
