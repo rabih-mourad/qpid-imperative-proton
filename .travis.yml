@@ -1,0 +1,21 @@
+sudo: false
+language: cpp
+compiler:
+- gcc
+
+matrix
+    include:
+    - os: linux
+
+addons:
+    apt:
+        packages:
+        - cmake
+
+before_script:
+- mkdir RelWithDebInfo
+- cd RelWithDebInfo
+- cmake .. -DCMAKE_CXX_FLAGS="-std=c++11" -DCMAKE_BUILD_TYPE="RelWithDebInfo"
+
+script:
+- cmake --build . -j$(nproc)
