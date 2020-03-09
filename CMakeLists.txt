@@ -22,6 +22,7 @@ set (headers
 set (sources
     src/Container.cpp
     src/Connection.cpp
+    src/Logger.hpp
     src/Session.cpp
     src/Sender.cpp
     src/Receiver.cpp
@@ -36,7 +37,13 @@ find_package(QpidProton REQUIRED)
 target_include_directories(${TARGET} PRIVATE ${QPID_PROTON_INCLUDE_DIR})
 
 add_definitions(-DPROTON_IMPERATIVE_EXPORTS)
-target_include_directories(${TARGET} PUBLIC "${CMAKE_SOURCE_DIR}/include")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DENABLE_DEBUG_MODE -O0")
+
+target_include_directories(${TARGET} 
+   PRIVATE ${QPID_PROTON_INCLUDE_DIR} "${CMAKE_SOURCE_DIR}/src"
+   PUBLIC "${CMAKE_SOURCE_DIR}/include"
+)
+
 target_link_libraries(${TARGET} ${GTEST_BOTH_LIBRARIES} ${QPID_PROTON_CPP_LIBRARIES})
 
 add_subdirectory(test)

@@ -1,9 +1,13 @@
 #include <proton/imperative/Container.hpp>
 #include <proton/imperative/Connection.hpp>
 
-#include <iostream>
+#include <Logger.hpp>
 
 using namespace proton;
+
+namespace {
+   Log debug_log;
+}
 
 static std::string containerCloseMsg("Container explicitly closed");
 
@@ -17,7 +21,7 @@ Container::Container()
          m_container.auto_stop(true);
          m_container.run();
       } catch (const std::exception& e) {
-         std::cout << "std::exception caught on pn container, message:" << e.what() << std::endl;
+         debug_log << "std::exception caught on pn container, message:" << e.what() << std::endl;
       }}));
    f.get();
 }
@@ -30,7 +34,7 @@ Container::~Container()
 void Container::close()
 {
    std::unique_lock<std::mutex> lock(m_containerHandler.m_manager.m_mutex);
-   std::cout << "---Container close called" << std::endl;
+   debug_log << "---Container close called" << std::endl;
    if (!m_containerHandler.m_manager.hasBeenClosed() && !m_containerHandler.m_manager.isInError())
    {
       // We get the future before launching the action because std promise is not thread safe between get and set
@@ -42,9 +46,9 @@ void Container::close()
          m_container.stop(m_pnErr);
       }
       lock.unlock();
-      std::cout << "---Container close is waiting" << std::endl;
+      debug_log << "---Container close is waiting" << std::endl;
       f.get();
-      std::cout << "---Container finished close" << std::endl;
+      debug_log << "---Container finished close" << std::endl;
    }
 }
 
@@ -65,13 +69,13 @@ Container::ContainerHandler::ContainerHandler()
 
 void Container::ContainerHandler::on_container_start(proton::container&)
 {
-   std::cout << "client on_container_start" << std::endl;
+   debug_log << "client on_container_start" << std::endl;
    m_manager.handlePnOpen();
 }
 
 void Container::ContainerHandler::on_container_stop(container&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_container_stop" << std::endl;
+   debug_log << "client on_container_stop" << std::endl;
    m_manager.handlePnClose();
 }

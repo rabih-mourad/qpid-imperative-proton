@@ -1,8 +1,12 @@
 #include <proton/imperative/Sender.hpp>
 
-#include <iostream>
+#include <Logger.hpp>
 
 using namespace proton;
+
+namespace {
+   Log debug_log;
+}
 
 Sender::Sender(work_queue* work, session& sess, const std::string& address, sender_options send_opts, CloseRegistry* sessionCloseRegistry)
    :m_senderHandler(new SenderHandler(work, sessionCloseRegistry))
@@ -74,34 +78,34 @@ std::future<void> Sender::SenderHandler::send(const message& mess)
 
 void Sender::SenderHandler::on_sender_open(sender& sen)
 {
-   std::cout << "client on_sender_open" << std::endl;
+   debug_log << "client on_sender_open" << std::endl;
    m_manager.handlePnOpen();
 }
 
 void Sender::SenderHandler::on_sender_close(sender&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_sender_close" << std::endl;
+   debug_log << "client on_sender_close" << std::endl;
    m_manager.handlePnClose();
 }
 
 void Sender::SenderHandler::on_sender_error(sender& sen)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_sender_error" << std::endl;
+   debug_log << "client on_sender_error" << std::endl;
    m_manager.handlePnError(sen.error().what());
 }
 
 void Sender::SenderHandler::on_tracker_accept(tracker& track)
 {
-   std::cout << "client on_tracker_accept" << std::endl;
+   debug_log << "client on_tracker_accept" << std::endl;
    auto promise = removeTrackerFromMapIfFoundElseThow(track);
    promise->set_value();
 }
 
 void Sender::SenderHandler::on_tracker_reject(tracker& track)
 {
-   std::cout << "client on_tracker_settle" << std::endl;
+   debug_log << "client on_tracker_settle" << std::endl;
    auto promise = removeTrackerFromMapIfFoundElseThow(track);
    auto except = std::make_exception_ptr(std::runtime_error("message was rejected by peer"));
    promise->set_exception(except);
@@ -109,7 +113,7 @@ void Sender::SenderHandler::on_tracker_reject(tracker& track)
 
 void Sender::SenderHandler::on_tracker_release(tracker& track)
 {
-   std::cout << "client on_tracker_settle" << std::endl;
+   debug_log << "client on_tracker_settle" << std::endl;
    auto promise = removeTrackerFromMapIfFoundElseThow(track);
    auto except = std::make_exception_ptr(std::runtime_error("message was released by peer"));
    promise->set_exception(except);

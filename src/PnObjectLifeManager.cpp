@@ -1,9 +1,12 @@
 #include <proton/imperative/PnObjectLifeManager.hpp>
 
-//to remove
-#include <iostream>
+#include <Logger.hpp>
 
 using namespace proton;
+
+namespace {
+   Log debug_log;
+}
 
 PnObjectLifeManager::PnObjectLifeManager(CloseRegistry* parentCloseRegistry, std::function<void(const std::string&)> releasePnObjects)
    : m_parentCloseRegistry(parentCloseRegistry), m_releasePnObjects(releasePnObjects), errorParentClosed("Parent object was closed")
@@ -18,7 +21,7 @@ PnObjectLifeManager::PnObjectLifeManager(CloseRegistry* parentCloseRegistry, std
 
 void PnObjectLifeManager::handlePnError(std::string errorMsg)
 {
-   std::cout << "---handlePnError start" << std::endl;
+   debug_log << "---handlePnError start" << std::endl;
    m_exception = std::make_exception_ptr(std::runtime_error(errorMsg));
    m_exceptionMsg = errorMsg;
    m_closeRegistry.notifyError(errorMsg);
@@ -28,12 +31,12 @@ void PnObjectLifeManager::handlePnError(std::string errorMsg)
    {
       m_onOpenPromise.set_exception(m_exception);
    }
-   std::cout << "---handlePnError finish" << std::endl;
+   debug_log << "---handlePnError finish" << std::endl;
 }
 
 void PnObjectLifeManager::handlePnClose()
 {
-   std::cout << "---handlePnClose start" << std::endl;
+   debug_log << "---handlePnClose start" << std::endl;
    if (!m_exception)
    {
       // If the eventloop called close on a handler without the user requesting, nor the destructor called nor on_x_error is called
@@ -43,7 +46,7 @@ void PnObjectLifeManager::handlePnClose()
       }
 
       // If a graceful close was called on the object
-      std::cout << "---handlePnClose no except" << std::endl;
+      debug_log << "---handlePnClose no except" << std::endl;
       m_closeRegistry.notifyError(errorParentClosed);
       m_closeRegistry.notifyClose();
       m_releasePnObjects("Object was closed");
@@ -51,10 +54,10 @@ void PnObjectLifeManager::handlePnClose()
    // If a close was called on the object after an on_x_error
    else
    {
-      std::cout << "---handlePnClose in except" << std::endl;
+      debug_log << "---handlePnClose in except" << std::endl;
       m_closeRegistry.notifyClose();
       m_releasePnObjects(m_exceptionMsg);
-      std::cout << "---handlePnClose after release" << std::endl;
+      debug_log << "---handlePnClose after release" << std::endl;
    }
 
    if (m_parentCloseRegistry != nullptr)

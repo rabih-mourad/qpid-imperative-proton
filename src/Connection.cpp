@@ -1,11 +1,18 @@
 #include <proton/imperative/Connection.hpp>
 #include <proton/imperative/Session.hpp>
 
-#include <iostream>
+#include <Logger.hpp>
+
+#include <proton/connection_options.hpp>
+#include <proton/container.hpp>
 
 using namespace proton;
 
 static std::string containerCloseMsg("Container explicitly closed");
+
+namespace {
+   Log debug_log;
+}
 
 Connection::Connection(container& c, const std::string& url, connection_options conn_opts, CloseRegistry* containerCloseRegistry)
    : m_connectionHandler(new ConnectionHandler(containerCloseRegistry))
@@ -62,7 +69,7 @@ Connection::ConnectionHandler::ConnectionHandler(CloseRegistry* containerCloseHa
 
 void Connection::ConnectionHandler::on_connection_open(connection& conn)
 {
-   std::cout << "client on_connection_open" << std::endl;
+   debug_log << "client on_connection_open" << std::endl;
    m_connection = conn;
    m_work = &m_connection.work_queue();
    m_manager.handlePnOpen();
@@ -71,33 +78,33 @@ void Connection::ConnectionHandler::on_connection_open(connection& conn)
 void Connection::ConnectionHandler::on_connection_close(connection&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_connection_close" << std::endl;
+   debug_log << "client on_connection_close" << std::endl;
 }
 
 void Connection::ConnectionHandler::on_connection_error(connection& conn)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_connection_error: " << conn.error().what() << std::endl;
+   debug_log << "client on_connection_error: " << conn.error().what() << std::endl;
    m_manager.handlePnError(conn.error().what());
 }
 
 void Connection::ConnectionHandler::on_transport_open(transport&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_transport_open" << std::endl;
+   debug_log << "client on_transport_open" << std::endl;
 }
 
 void Connection::ConnectionHandler::on_transport_close(transport&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_transport_close" << std::endl;
+   debug_log << "client on_transport_close" << std::endl;
    m_manager.handlePnClose();
 }
 
 void Connection::ConnectionHandler::on_transport_error(transport& t)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_transport_error: " << t.error().what() << std::endl;
+   debug_log << "client on_transport_error: " << t.error().what() << std::endl;
 
    if (t.error().description().find(containerCloseMsg) != std::string::npos)
    {
@@ -112,7 +119,7 @@ void Connection::ConnectionHandler::on_transport_error(transport& t)
 void Connection::ConnectionHandler::releasePnMemberObjects(const std::string&)
 {
    // Reseting pn objects for thread safety
-   std::cout << "---Connection releasePnMemberObjects before" << std::endl;
+   debug_log << "---Connection releasePnMemberObjects before" << std::endl;
    m_connection = connection();
-   std::cout << "---Connection releasePnMemberObjects" << std::endl;
+   debug_log << "---Connection releasePnMemberObjects" << std::endl;
 }

@@ -1,9 +1,13 @@
 #include <proton/imperative/Receiver.hpp>
 #include <proton/imperative/Delivery.hpp>
 
-#include <iostream>
+#include <Logger.hpp>
 
 using namespace proton;
+
+namespace {
+   Log debug_log;
+}
 
 Receiver::Receiver(work_queue* work, session& sess, const std::string& address, receiver_options rec_opts, CloseRegistry* sessionCloseRegistry)
    : m_receiverHandler(new ReceiverHandler(work, sessionCloseRegistry))
@@ -72,29 +76,29 @@ std::future<Delivery> Receiver::ReceiverHandler::receive()
 
 void Receiver::ReceiverHandler::on_receiver_open(receiver& rec)
 {
-   std::cout << "client on_receiver_open" << std::endl;
+   debug_log << "client on_receiver_open" << std::endl;
    m_manager.handlePnOpen();
 }
 
 void Receiver::ReceiverHandler::on_receiver_close(receiver&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_receiver_close" << std::endl;
-   std::cout << "pointer : " << &m_unclosedDeliveries << "  size" << m_unclosedDeliveries.size() << std::endl;
+   debug_log << "client on_receiver_close" << std::endl;
+   debug_log << "pointer : " << &m_unclosedDeliveries << "  size" << m_unclosedDeliveries.size() << std::endl;
    m_manager.handlePnClose();
 }
 
 void Receiver::ReceiverHandler::on_receiver_error(receiver& rec)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_receiver_error" << std::endl;
+   debug_log << "client on_receiver_error" << std::endl;
    m_manager.handlePnError(rec.error().what());
 }
 
 void Receiver::ReceiverHandler::on_message(delivery& d, message& m)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_message" << std::endl;
+   debug_log << "client on_message" << std::endl;
    {
       std::lock_guard<std::mutex> l1(m_listLock);
       m_unclosedDeliveries.emplace_back(d);

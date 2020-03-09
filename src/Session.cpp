@@ -2,9 +2,13 @@
 #include <proton/imperative/Sender.hpp>
 #include <proton/imperative/Receiver.hpp>
 
-#include <iostream>
+#include <Logger.hpp>
 
 using namespace proton;
+
+namespace {
+   Log debug_log;
+}
 
 Session::Session(connection& con, work_queue* work, session_options sess_opts, CloseRegistry* connectionCloseRegistry)
    : m_sessionHandler(new SessionHandler(work, connectionCloseRegistry))
@@ -72,21 +76,21 @@ Session::SessionHandler::SessionHandler(work_queue* w, CloseRegistry* connection
 
 void Session::SessionHandler::on_session_open(session& sess)
 {
-   std::cout << "client on_session_open" << std::endl;
+   debug_log << "client on_session_open" << std::endl;
    m_manager.handlePnOpen();
 }
 
 void Session::SessionHandler::on_session_close(session&)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_session_close" << std::endl;
+   debug_log << "client on_session_close" << std::endl;
    m_manager.handlePnClose();
 }
 
 void Session::SessionHandler::on_session_error(session& sess)
 {
    std::lock_guard<std::mutex> lock(m_manager.m_mutex);
-   std::cout << "client on_session_error" << std::endl;
+   debug_log << "client on_session_error" << std::endl;
    m_manager.handlePnError(sess.error().what());
 }
 

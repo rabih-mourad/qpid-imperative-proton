@@ -1,7 +1,5 @@
 #include <proton/imperative/Delivery.hpp>
 
-#include <iostream>
-
 using namespace proton;
 
 void Delivery::accept()
