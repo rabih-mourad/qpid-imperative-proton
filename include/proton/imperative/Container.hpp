@@ -2,56 +2,37 @@
 #define PROTON_IMPERATIVE_CONTAINER_HPP
 
 #include <proton/imperative/config.hpp>
-#include <proton/imperative/ThreadRAII.hpp>
-#include <proton/imperative/PnObjectLifeManager.hpp>
+#include <proton/imperative/Fwd.hpp>
 
-#include <proton/connection_options.hpp>
-#include <proton/container.hpp>
-#include <proton/messaging_handler.hpp>
+#include <proton/fwd.hpp>
 
+#include <memory>
 #include <string>
-#include <future>
 
 namespace proton {
 
-class Connection;
-
-class PROTON_IMPERATIVE_API Container
+class Container
 {
 public:
-   Container();
-   ~Container();
-   Container(const Container& other) = delete;
-   Container& operator=(const Container& other) = delete;
-   Container& operator=(Container&& other) = delete;
-   Container(Container&& c) = delete;
+   PROTON_IMPERATIVE_API Container();
+   
 
-   void close();
    //This method is synchronous because there is no thread safe way in proton to get the connection
-   Connection openConnection(const std::string& url, connection_options conn_opts);
+   PROTON_IMPERATIVE_API Connection openConnection(const std::string& url, connection_options conn_opts);
+
+   PROTON_IMPERATIVE_API void close();
+
+   PROTON_IMPERATIVE_API Container(const Container& other) = default;
+   PROTON_IMPERATIVE_API Container& operator=(const Container& other) = default;
+   PROTON_IMPERATIVE_API Container(Container&& c) = default;
+   PROTON_IMPERATIVE_API Container& operator=(Container&& other) = default;
+   PROTON_IMPERATIVE_API ~Container() = default;
 
 private:
-   struct ContainerHandler : public messaging_handler
-   {
-      ContainerHandler();
-      ContainerHandler(const ContainerHandler& other) = delete;
-      ContainerHandler& operator=(const ContainerHandler& other) = delete;
-      ContainerHandler& operator=(ContainerHandler&& other) = delete;
-      ContainerHandler(ContainerHandler&& c) = delete;
-
-      void on_container_start(proton::container&) override;
-      void on_container_stop(container&) override;
-
-      PnObjectLifeManager m_manager;
-   };
-
-   ContainerHandler m_containerHandler;
-   container m_container;
-   error_condition m_pnErr;
-   ThreadRAII m_thread;
-   // The following flag should be removed when container.stop is back to be thread safe
-   bool firstConnCreated = false;
+   class Impl;
+   std::shared_ptr<Impl> m_impl;
 };
+
 }
 
 #endif

@@ -8,13 +8,13 @@ include(CompilerFlags)
 
 set (headers
     include/proton/imperative/config.hpp
+    include/proton/imperative/Fwd.hpp
     include/proton/imperative/Connection.hpp
     include/proton/imperative/Container.hpp
     include/proton/imperative/Session.hpp
     include/proton/imperative/Sender.hpp
     include/proton/imperative/Receiver.hpp
     include/proton/imperative/Delivery.hpp
-    include/proton/imperative/ThreadRAII.hpp
     include/proton/imperative/PromiseWithActiveFlag.hpp
     include/proton/imperative/PnObjectLifeManager.hpp
     include/proton/imperative/CloseRegistry.hpp)
@@ -27,14 +27,13 @@ set (sources
     src/Sender.cpp
     src/Receiver.cpp
     src/Delivery.cpp
-    src/ThreadRAII.cpp
+    src/ThreadRAII.hpp
     src/PromiseWithActiveFlag.cpp
     src/PnObjectLifeManager.cpp
     src/CloseRegistry.cpp)
 add_library(${TARGET} SHARED ${headers} ${sources})
 
 find_package(QpidProton REQUIRED)
-target_include_directories(${TARGET} PRIVATE ${QPID_PROTON_INCLUDE_DIR})
 
 add_definitions(-DPROTON_IMPERATIVE_EXPORTS)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -DENABLE_DEBUG_MODE -O0")

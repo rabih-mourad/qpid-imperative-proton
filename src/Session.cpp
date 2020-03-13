@@ -37,12 +37,13 @@ void Session::close()
    std::unique_lock<std::mutex> lock(m_sessionHandler->m_manager.m_mutex);
    if (!m_sessionHandler->m_manager.hasBeenClosed())
    {
-      std::function<void()> closeFn = [=]() { m_sessionHandler->m_session.close(); };
       //we get the future before launching the action because std promise is not thread safe between get and set
       auto f = m_sessionHandler->m_manager.close();
       if (!m_sessionHandler->m_manager.isInError())
       {
-         m_sessionHandler->m_work->add(closeFn);
+         m_sessionHandler->m_work->add([this]() {
+            m_sessionHandler->m_session.close();
+         });
       }
       lock.unlock();
       f.wait();

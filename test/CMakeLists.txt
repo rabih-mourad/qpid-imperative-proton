@@ -8,6 +8,7 @@ include(CompilerFlags)
 
 set (sources
     Broker.hpp
+    ProtonIncludes.hpp
     Constants.hpp
 	ContainerTest.cpp
 	ConnectionTest.cpp

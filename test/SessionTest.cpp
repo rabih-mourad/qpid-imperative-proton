@@ -1,18 +1,13 @@
-#include <proton/connection.hpp>
-#include <proton/container.hpp>
-#include <proton/session.hpp>
-#include <proton/session_options.hpp>
-
 #include <proton/imperative/Container.hpp>
 #include <proton/imperative/Connection.hpp>
 
-#include <Broker.hpp>
 #include <Constants.hpp>
+#include <Broker.hpp>
+#include <ProtonIncludes.hpp>
 
 #include <iostream>
 
 #include <gtest/gtest.h>
-
 
 TEST(SessionTest, sessionClosesCorrectlyOnDestruction)
 {

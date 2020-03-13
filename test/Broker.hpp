@@ -1,18 +1,48 @@
 #ifndef TEST_BROKER_HPP
 #define TEST_BROKER_HPP
 
+#include <proton/container.hpp>
 #include <proton/listener.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/listen_handler.hpp>
 #include <proton/error_condition.hpp>
-
-#include <proton/imperative/ThreadRAII.hpp>
 
 #include <string>
 #include <map>
 #include <iostream>
 #include <thread>
 #include <future>
+
+class ThreadRAII
+{
+public:
+   ThreadRAII() = default;
+   ThreadRAII(ThreadRAII&& thread) = default;
+   ThreadRAII& operator=(ThreadRAII&& thread) = default;
+   ThreadRAII(const ThreadRAII& other) = delete;
+   ThreadRAII& operator=(const ThreadRAII& other) = delete;
+
+   ThreadRAII(std::thread&& thread)
+      : m_thread(std::move(thread))
+   {
+   }
+
+   std::thread& get()
+   {
+      return m_thread;
+   }
+
+   ~ThreadRAII()
+   {
+      if (m_thread.joinable())
+      {
+         m_thread.join();
+      }
+   }
+
+private:
+   std::thread m_thread;
+};
 
 class listenerHandler : public proton::listen_handler
 {
@@ -209,7 +239,7 @@ private:
    std::string m_url;
    bool m_isClosed = false;
    proton::container m_container;
-   proton::ThreadRAII m_brokerThread;
+   ThreadRAII m_brokerThread;
    std::deque<proton::message> m_messages;
    std::pair<proton::message, proton::delivery> m_currentDelivery;
    listenerHandler m_listenerHandler;
