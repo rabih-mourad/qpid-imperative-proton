@@ -46,4 +46,6 @@ target_include_directories(${TARGET}
 
 target_link_libraries(${TARGET} ${GTEST_BOTH_LIBRARIES} ${QPID_PROTON_CPP_LIBRARIES})
 
+enable_testing()
 add_subdirectory(test)
+
