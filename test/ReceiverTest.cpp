@@ -30,10 +30,10 @@ tests to add:
 
 TEST(ReceiverTest, receiverClosesCorrectlyOnDestruction)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       proton::Session sess = conn.openSession(proton::session_options());
       proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
       rec.getOpenFuture().get();
@@ -43,12 +43,12 @@ TEST(ReceiverTest, receiverClosesCorrectlyOnDestruction)
 
 TEST(ReceiverTest, canReceiveInAsynch)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1"), proton::message("msg2"), proton::message("msg3") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
 
@@ -72,13 +72,13 @@ TEST(ReceiverTest, canReceiveInAsynch)
 
 TEST(ReceiverTest, oneShotReceiver)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    const std::string msgStr("my message");
    std::vector<proton::message> msgs{ proton::message(msgStr) };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::message msg = proton::Container()
-                           .openConnection(url, proton::connection_options())
+                           .openConnection(brk->getURL(), proton::connection_options())
                            .openSession(proton::session_options())
                            .openReceiver(destination, proton::receiver_options())
                            .receive().get().pn_message;
@@ -90,10 +90,10 @@ TEST(ReceiverTest, oneShotReceiver)
 
 TEST(ReceiverTest, receiverUnusableAfterCloseIsCalled)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
    rec.getOpenFuture().get();
@@ -109,10 +109,10 @@ TEST(ReceiverTest, receiverUnusableAfterCloseIsCalled)
 
 TEST(ReceiverTest, receiverClosesIfSessionCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    rec.getOpenFuture().get();
@@ -128,10 +128,10 @@ TEST(ReceiverTest, receiverClosesIfSessionCloses)
 
 TEST(ReceiverTest, receiverClosesIfConnectionCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    rec.getOpenFuture().get();
@@ -147,10 +147,10 @@ TEST(ReceiverTest, receiverClosesIfConnectionCloses)
 
 TEST(ReceiverTest, receiverClosesIfContainerCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    rec.getOpenFuture().get();
@@ -166,16 +166,16 @@ TEST(ReceiverTest, receiverClosesIfContainerCloses)
 
 TEST(ReceiverTest, receiverInErrorIfConnectionInError)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
    rec.getOpenFuture().get();
 
    const std::string errMsg("Simulating network error");
-   brk.close(errMsg);
+   brk->close(errMsg);
    std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
    EXPECT_THROW(rec.receive().get(), std::exception);

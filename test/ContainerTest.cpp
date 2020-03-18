@@ -28,11 +28,11 @@ TEST(ContainerTest, containerClosesCorrectlyOnDestruction)
 
 TEST(ContainerTest, canCreateMultipleConnectionsFromContainer)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn1 = cont.openConnection(url, proton::connection_options());
-   proton::Connection conn2 = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn1 = cont.openConnection(brk->getURL(), proton::connection_options());
+   proton::Connection conn2 = cont.openConnection(brk->getURL(), proton::connection_options());
    conn1.close();
    conn2.close();
    cont.close();
@@ -40,10 +40,12 @@ TEST(ContainerTest, canCreateMultipleConnectionsFromContainer)
 
 TEST(ContainerTest, ContainerCantCreateConnectionsAfterClose)
 {
+   auto brk(Broker::createBroker());
+
    proton::Container cont;
    cont.close();
    try {
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       FAIL() << TestShouldFailIfNoThrow;
    }
    catch (std::exception& e) {

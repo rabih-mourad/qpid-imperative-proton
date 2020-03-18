@@ -16,20 +16,20 @@
 
 TEST(ConnectionTest, connectionClosesCorrectlyOnDestruction)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    }
    std::cout << "Destroyed correctly " << std::endl;
 }
 
 TEST(ConnectionTest, CanCreateMultipleSessionsFromConnection)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess1 = conn.openSession(proton::session_options());
    proton::Session sess2 = conn.openSession(proton::session_options());
    sess1.getOpenFuture().get();
@@ -42,10 +42,10 @@ TEST(ConnectionTest, CanCreateMultipleSessionsFromConnection)
 
 TEST(ConnectionTest, ConnectionUnusableIfConnnectionCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    conn.close();
    try {
       std::cout << "opening session" << std::endl;
@@ -59,10 +59,10 @@ TEST(ConnectionTest, ConnectionUnusableIfConnnectionCloses)
 
 TEST(ConnectionTest, ConnectionClosesIfContainerCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    cont.close();
    try {
       std::cout << "opening session" << std::endl;
@@ -90,13 +90,13 @@ TEST(ConnectionTest, errorHandlingAtStart)
 
 TEST(ConnectionTest, connectionThrowsCorrectError)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
 
    const std::string errMsg("Simulating network error");
-   brk.close(errMsg);
+   brk->close(errMsg);
    std::this_thread::sleep_for(std::chrono::milliseconds(2));
    EXPECT_THROW(conn.openSession(proton::session_options()).getOpenFuture().get(), std::exception);
 }
