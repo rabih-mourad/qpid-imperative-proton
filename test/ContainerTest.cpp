@@ -1,16 +1,26 @@
-#include <proton/connection.hpp>
-#include <proton/container.hpp>
-
 #include <proton/imperative/Container.hpp>
 #include <proton/imperative/Connection.hpp>
 
-#include <Broker.hpp>
 #include <Constants.hpp>
+#include <Broker.hpp>
+#include <ProtonIncludes.hpp>
 
 #include <iostream>
 
 #include <gtest/gtest.h>
 
+TEST(ContainerTest, constructorsWorkAsExpected)
+{
+   proton::Container cont;
+
+   proton::Container copy(cont);
+   proton::Container copyAssign;
+   copyAssign = copy;
+
+   proton::Container move(std::move(copy));
+   proton::Container moveAssign;
+   moveAssign = std::move(move);
+}
 
 TEST(ContainerTest, canCreateAndCloseContainer)
 {

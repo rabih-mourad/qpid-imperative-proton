@@ -32,12 +32,13 @@ void Sender::close()
    std::unique_lock<std::mutex> lock(m_senderHandler->m_manager.m_mutex);
    if (!m_senderHandler->m_manager.hasBeenClosed())
    {
-      std::function<void()> closeFn = [=]() { m_senderHandler->m_sender.close(); };
       //we get the future before launching the action because std promise is not thread safe between get and set
       auto f = m_senderHandler->m_manager.close();
       if (!m_senderHandler->m_manager.isInError())
       {
-         m_senderHandler->m_work->add(closeFn);
+         m_senderHandler->m_work->add([ this ]() { 
+            m_senderHandler->m_sender.close(); 
+         });
       }
       lock.unlock();
       f.wait();

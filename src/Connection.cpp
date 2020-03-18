@@ -36,12 +36,13 @@ void Connection::close()
    std::unique_lock<std::mutex> lock(m_connectionHandler->m_manager.m_mutex);
    if (!m_connectionHandler->m_manager.hasBeenClosed())
    {
-      std::function<void()> closeFn = [=]() { m_connectionHandler->m_connection.close(); };
       //we get the future before launching the action because std promise is not thread safe between get and set
       auto f = m_connectionHandler->m_manager.close();
       if (!m_connectionHandler->m_manager.isInError())
       {
-         m_connectionHandler->m_work->add(closeFn);
+         m_connectionHandler->m_work->add([this]() { 
+            m_connectionHandler->m_connection.close(); 
+         });
       }
       lock.unlock();
       //we need to wait before destroying because the handler must live till the end
