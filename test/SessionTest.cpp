@@ -16,10 +16,10 @@
 
 TEST(SessionTest, sessionClosesCorrectlyOnDestruction)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       proton::Session sess = conn.openSession(proton::session_options());
       sess.getOpenFuture().get();
    }
@@ -28,10 +28,10 @@ TEST(SessionTest, sessionClosesCorrectlyOnDestruction)
 
 TEST(SessionTest, CanCreateMultipleReceiversFromSession)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec1 = sess.openReceiver(destination, proton::receiver_options());
    proton::Receiver rec2 = sess.openReceiver(destination, proton::receiver_options());
@@ -47,10 +47,10 @@ TEST(SessionTest, CanCreateMultipleReceiversFromSession)
 
 TEST(SessionTest, CanCreateMultipleSendersFromSession)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen1 = sess.openSender(destination, proton::sender_options());
    proton::Sender sen2 = sess.openSender(destination, proton::sender_options());
@@ -66,10 +66,10 @@ TEST(SessionTest, CanCreateMultipleSendersFromSession)
 
 TEST(SessionTest, sessionUnusableIfCloseIsCalled)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    sess.getOpenFuture().get();
    sess.close();
@@ -92,10 +92,10 @@ TEST(SessionTest, sessionUnusableIfCloseIsCalled)
 
 TEST(SessionTest, sessionClosesIfConnectionCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    sess.getOpenFuture().get();
    conn.close();
@@ -110,10 +110,10 @@ TEST(SessionTest, sessionClosesIfConnectionCloses)
 
 TEST(SessionTest, sessionClosesIfContainerCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    sess.getOpenFuture().get();
    cont.close();
@@ -128,15 +128,15 @@ TEST(SessionTest, sessionClosesIfContainerCloses)
 
 TEST(SessionTest, sessionInErrorIfConnectionInError)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    sess.getOpenFuture().get();
 
    const std::string errMsg("Simulating network error");
-   brk.close(errMsg);
+   brk->close(errMsg);
 
    std::this_thread::sleep_for(std::chrono::milliseconds(2));
    EXPECT_THROW(sess.openSender(destination, proton::sender_options()).getOpenFuture().get(), std::exception);

@@ -6,7 +6,7 @@
 const std::string ObjectClosedExceptionMsg("Can't execute the action because the object was closed");
 const std::string ParentObjectWasClosedExceptionMsg("Parent object was closed");
 const std::string TestShouldFailIfNoThrow("TestShouldFailIfNoThrow");
-const std::string url("//127.0.0.1:5672");
+const std::string host("//127.0.0.1");
 const std::string destination("examples");
 
 #endif

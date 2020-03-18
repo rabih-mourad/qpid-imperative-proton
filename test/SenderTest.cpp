@@ -29,10 +29,10 @@ tests to add:
 
 TEST(SenderTest, senderClosesCorrectlyOnDestruction)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       proton::Session sess = conn.openSession(proton::session_options());
       proton::Sender sen = sess.openSender(destination, proton::sender_options());
       sen.getOpenFuture().get();
@@ -42,10 +42,10 @@ TEST(SenderTest, senderClosesCorrectlyOnDestruction)
 
 TEST(SenderTest, canSendInAsynch)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen = sess.openSender(destination, proton::sender_options());
 
@@ -66,10 +66,10 @@ TEST(SenderTest, canSendInAsynch)
 
 TEST(SenderTest, oneShotSender)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container()
-      .openConnection(url, proton::connection_options())
+      .openConnection(brk->getURL(), proton::connection_options())
       .openSession(proton::session_options())
       .openSender(destination, proton::sender_options())
       .send(proton::message("test"))
@@ -78,10 +78,10 @@ TEST(SenderTest, oneShotSender)
 
 TEST(SenderTest, senderUnusableAfterCloseIsCalled)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
@@ -98,10 +98,10 @@ TEST(SenderTest, senderUnusableAfterCloseIsCalled)
 
 TEST(SenderTest, senderClosesIfConnectionCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
@@ -118,10 +118,10 @@ TEST(SenderTest, senderClosesIfConnectionCloses)
 
 TEST(SenderTest, senderClosesIfContainerCloses)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
@@ -138,16 +138,16 @@ TEST(SenderTest, senderClosesIfContainerCloses)
 
 TEST(SenderTest, senderInErrorIfConnectionInError)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Sender sen = sess.openSender(destination, proton::sender_options());
    sen.getOpenFuture().get();
 
    const std::string errMsg("Simulating network error");
-   brk.close(errMsg);
+   brk->close(errMsg);
    std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
    proton::message msg("test");

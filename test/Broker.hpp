@@ -8,20 +8,22 @@
 
 #include <proton/imperative/ThreadRAII.hpp>
 
+#include <Constants.hpp>
+
 #include <string>
 #include <map>
 #include <iostream>
 #include <thread>
 #include <future>
 
-class listenerHandler : public proton::listen_handler
+class ListenerHandler : public proton::listen_handler
 {
 public:
-   listenerHandler()
-      :m_containerStarted(new std::promise<void>)
+   ListenerHandler()
+      :m_containerStarted(new std::promise<int>)
    {}
 
-   std::future<void> getStartedFuture()
+   std::future<int> getStartedFuture()
    {
       return m_containerStarted->get_future();
    }
@@ -29,11 +31,11 @@ public:
    proton::listener m_listener;
 
 private:
-   void on_open(proton::listener&) override
+   void on_open(proton::listener& l) override
    {
       if (m_containerStarted)
       {
-         m_containerStarted->set_value();
+         m_containerStarted->set_value(l.port());
          m_containerStarted.reset();
       }
    }
@@ -52,26 +54,70 @@ private:
       m_listener = proton::listener();
    }
 
-   std::unique_ptr<std::promise<void>> m_containerStarted;
-};
-
-struct ConnectionStruct
-{
-   ConnectionStruct() = default;
-   ConnectionStruct(proton::connection c, proton::work_queue* w)
-      :m_connection(c), m_work(w)
-   {}
-
-   proton::connection m_connection;
-   proton::work_queue* m_work;
-   std::promise<void> m_waitForClose;
+   std::unique_ptr<std::promise<int>> m_containerStarted;
 };
 
 class Broker : public proton::messaging_handler
 {
 public:
-   Broker(const std::string& url, const std::string& destination)
-      :m_url(url + "/" + destination), m_container(*this)
+   // Returning a pointer because Broker contains a proton::container which is not movable 
+   static std::unique_ptr<Broker> createBrokerOnSpecifiedPort(int port)
+   {
+      return std::unique_ptr<Broker>(new Broker(host, port, destination));
+   }
+
+   static std::unique_ptr<Broker> createBroker()
+   {
+      //using port 0 and then caching the real port number to be able to launch multiple tests in parallel
+      static int cachedPort = 0;
+      std::unique_ptr<Broker> broker_ptr(new Broker(host, cachedPort, destination));
+      if (cachedPort == 0) {
+         cachedPort = broker_ptr->getPort();
+      }
+      return broker_ptr;
+   }
+
+   ~Broker()
+   {
+      if (!m_isClosed) {
+         m_container.stop();
+         m_stopPromise.get_future().wait();
+         m_isClosed = true;
+      }
+   }
+
+   void injectMessages(std::vector<proton::message> messages)
+   {
+      m_messages.insert(m_messages.end(), messages.begin(), messages.end());
+   }
+
+   std::string getURL()
+   {
+      return std::string().append(host).append(":").append(std::to_string(m_port));
+   }
+
+   int getPort()
+   {
+      return m_port;
+   }
+
+   // Call only if you have one connection to the broker
+   void close(const std::string& errMsg)
+   {
+      if (!m_isClosed) {
+         m_container.stop(errMsg);
+         m_stopPromise.get_future().wait();
+         m_isClosed = true;
+      }
+   }
+
+   int m_acceptedMsgs = 0;
+   int m_rejectedMsgs = 0;
+   int m_releasedMsgs = 0;
+
+private:
+   Broker(const std::string& host, int port, const std::string& destination)
+      :m_url(std::string().append(host).append(":").append(std::to_string(port)).append("/").append(destination)), m_container(*this)
    {
       auto future = m_listenerHandler.getStartedFuture();
       m_brokerThread = std::thread([&]() {
@@ -85,43 +131,9 @@ public:
          }});
 
       // Wait for the container to start
-      future.get();
+      m_port = future.get();
    }
 
-   ~Broker()
-   {
-      if (!m_isClosed) {
-         //m_listenerHandler.m_listener.stop();
-         m_container.stop();
-         m_stopPromise.get_future().wait();
-         m_isClosed = true;
-      }
-   }
-
-   void injectMessages(std::vector<proton::message> messages)
-   {
-      m_messages.insert(m_messages.end(), messages.begin(), messages.end());
-   }
-
-   // Call only if you have one connection to the broker
-   void close(const std::string& errMsg)
-   {
-      //ConnectionStruct& c(m_connections.begin()->second);
-      //c.m_work->add([&]() { c.m_connection.close(proton::error_condition(errMsg)); m_listenerHandler.m_listener.stop(); });
-      //c.m_waitForClose.get_future().get();
-      if (!m_isClosed) {
-         //m_listenerHandler.m_listener.stop();
-         m_container.stop(errMsg);
-         m_stopPromise.get_future().wait();
-         m_isClosed = true;
-      }
-   }
-
-   int m_acceptedMsgs = 0;
-   int m_rejectedMsgs = 0;
-   int m_releasedMsgs = 0;
-
-private:
    void on_container_start(proton::container&) override
    {
       std::cout << "broker on_container_start" << std::endl;
@@ -139,21 +151,17 @@ private:
    {
       std::cout << "broker on_connection_open" << std::endl;
       c.open();
-      //m_connections.emplace(c, ConnectionStruct(c, &c.work_queue()));
    }
 
    void on_connection_close(proton::connection& c) override
    {
       std::cout << "broker on_connection_close" << std::endl;
-      //m_connections[c].m_waitForClose.set_value();
-      //m_connections.erase(c);
    }
 
    void on_transport_error(proton::transport &t) override
    {
       std::cout << "broker on_transport_error" << std::endl;
       std::cerr << "Broker::on_transport_error: " << t.error().what() << std::endl;
-      //m_listenerHandler.m_listener.stop();
    }
 
    void on_error(const proton::error_condition &c) override
@@ -207,14 +215,14 @@ private:
 
 private:
    std::string m_url;
+   int m_port;
    bool m_isClosed = false;
    proton::container m_container;
    proton::ThreadRAII m_brokerThread;
    std::deque<proton::message> m_messages;
    std::pair<proton::message, proton::delivery> m_currentDelivery;
-   listenerHandler m_listenerHandler;
+   ListenerHandler m_listenerHandler;
 
-   //std::map<proton::connection, ConnectionStruct> m_connections;
    std::promise<void> m_stopPromise;
 };
 

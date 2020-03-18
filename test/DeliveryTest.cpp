@@ -34,12 +34,12 @@ tests to add:
 
 TEST(DeliveryTest, canAcknowledgeInAsynch)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1"), proton::message("msg2"), proton::message("msg3"), proton::message("msg4"), proton::message("msg5"), proton::message("msg6") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       proton::Session sess = conn.openSession(proton::session_options());
       proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
 
@@ -57,20 +57,20 @@ TEST(DeliveryTest, canAcknowledgeInAsynch)
       del6.reject();
    }
 
-   ASSERT_EQ(3, brk.m_acceptedMsgs);
-   ASSERT_EQ(2, brk.m_rejectedMsgs);
-   ASSERT_EQ(1, brk.m_releasedMsgs);
+   ASSERT_EQ(3, brk->m_acceptedMsgs);
+   ASSERT_EQ(2, brk->m_rejectedMsgs);
+   ASSERT_EQ(1, brk->m_releasedMsgs);
 }
 
 TEST(DeliveryTest, oneShotReceiver)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    const std::string msgStr("my message");
    std::vector<proton::message> msgs{ proton::message(msgStr) };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::message msg = proton::Container()
-                           .openConnection(url, proton::connection_options())
+                           .openConnection(brk->getURL(), proton::connection_options())
                            .openSession(proton::session_options())
                            .openReceiver(destination, proton::receiver_options().auto_accept(false))
                            .receive().get().pn_message;
@@ -82,12 +82,12 @@ TEST(DeliveryTest, oneShotReceiver)
 
 TEST(DeliveryTest, DISABLED_acknowledgeWithAutoacceptDoesNothing)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1")};
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
    {
       proton::Container cont;
-      proton::Connection conn = cont.openConnection(url, proton::connection_options());
+      proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
       proton::Session sess = conn.openSession(proton::session_options());
       proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(true));
 
@@ -95,18 +95,18 @@ TEST(DeliveryTest, DISABLED_acknowledgeWithAutoacceptDoesNothing)
       del1.reject();
    }
 
-   ASSERT_EQ(1, brk.m_acceptedMsgs);
-   ASSERT_EQ(0, brk.m_rejectedMsgs);
+   ASSERT_EQ(1, brk->m_acceptedMsgs);
+   ASSERT_EQ(0, brk->m_rejectedMsgs);
 }
 
 TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnReceiver)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
    std::future<proton::Delivery> awaitrec = rec.receive();
@@ -123,12 +123,12 @@ TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnReceiver)
 
 TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnSession)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    std::future<proton::Delivery> awaitrec = rec.receive();
@@ -145,12 +145,12 @@ TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnSession)
 
 TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnConnection)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    std::future<proton::Delivery> awaitrec = rec.receive();
@@ -167,12 +167,12 @@ TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnConnection)
 
 TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnContainer)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options().auto_accept(false));
    std::future<proton::Delivery> awaitrec = rec.receive();
@@ -189,19 +189,19 @@ TEST(DeliveryTest, deliveryUnusableAfterCloseIsCalledOnContainer)
 
 TEST(DeliveryTest, deliveryInErrorIfConnectionInError)
 {
-   Broker brk(url, destination);
+   auto brk(Broker::createBroker());
    std::vector<proton::message> msgs{ proton::message("msg1") };
-   brk.injectMessages(msgs);
+   brk->injectMessages(msgs);
 
    proton::Container cont;
-   proton::Connection conn = cont.openConnection(url, proton::connection_options());
+   proton::Connection conn = cont.openConnection(brk->getURL(), proton::connection_options());
    proton::Session sess = conn.openSession(proton::session_options());
    proton::Receiver rec = sess.openReceiver(destination, proton::receiver_options());
    std::future<proton::Delivery> awaitrec = rec.receive();
    proton::Delivery del = awaitrec.get();
 
    const std::string errMsg("Simulating network error");
-   brk.close(errMsg);
+   brk->close(errMsg);
    std::this_thread::sleep_for(std::chrono::milliseconds(4));
    // TO DO might be random if the on_error is called lately
    EXPECT_THROW(del.accept(), std::exception);
